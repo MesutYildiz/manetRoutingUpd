@@ -127,9 +127,9 @@ if manager.run_simulation():
 
 | Protocol | Network Configuration | Status |
 |----------|----------------------|--------|
-| **AODV** | `inet.examples.aodv.AODVNetwork` | ✅ Fully Featured |
-| **DSR** | `inet.examples.manetrouting.dymo.DYMONetwork` | ✅ Working |
-| **OLSR** | `inet.examples.adhoc.ieee80211.Net80211` | ✅ Working |
+| **AODV** | `inet.examples.aodv.AODVNetwork` |  Fully Featured |
+| **DSR** | `inet.examples.manetrouting.dymo.DYMONetwork` | Developing |
+| **OLSR** | `inet.examples.adhoc.ieee80211.Net80211` |  Developing |
 
 ---
 
@@ -223,3 +223,4 @@ If this project helped you:
 **Last Update**: December 2024
 
 [⬆ Back to Top](#-manet-routing-protocol-simulator)
+

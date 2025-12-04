@@ -1,10 +1,7 @@
 """
 OMNeT++ Manager - Python controller for OMNeT++ and INETMANET simulation engine
 
-Kesin Çözüm: Protokol ve Host Tipi Standardizasyonu
-- Her protokol için özel host tipi kullanılıyor (uyumsuzluk çözümü)
-- AODV için AODVRouter, DSR için DYMORouter, OLSR için AdhocHost
-- libINET.dll PATH sorunu çözüldü
+
 """
 
 import os
@@ -60,44 +57,69 @@ class OmnetManager:
         OMNeT++ için .ini dosyasını sıfırdan, garantili ayarlarla oluşturur.
         Kesin Çözüm: Her protokol için özel host tipi kullanılıyor (Altın Anahtar Stratejisi)
         """
-        # 1. PROTOKOL VE NETWORK STRATEJİSİ (Her Protokol İçin En Uygun Yapı)
-        # AODV: Özel router kullan (daha önce çalışıyordu)
-        # DSR: DYMO Router kullan - radyo ayarlarını override etme (kendi ayarlarını kullan)
-        # OLSR: AdhocHost ile deneyelim (eğer çalışmazsa alternatif)
+        # 1. PROTOKOL VE NETWORK STRATEJİSİ
+        # GenericManetNetwork: Tüm protokoller için ortak network
+        # IdealRadioMedium kullanıyor, hostType parametrik
         protocol_upper = protocol.upper()
-        use_custom_radio = True  # Varsayılan: radyo ayarlarını override et
+        use_custom_radio = True  # GenericManetNetwork IdealRadioMedium kullanıyor
+        generic_network = "inet.examples.aodv.GenericManetNetwork"
         
         if protocol_upper == "AODV":
-            # AODV için çalışan yapıyı geri getiriyoruz
-            if network_name is None or network_name.strip() == "":
-                network_name = "inet.examples.aodv.AODVNetwork"
-            host_type = "inet.node.aodv.AODVRouter"
-            routing_conf = ""  # Router içinde gömülü
-            use_custom_radio = True  # AODV için IdealWirelessNic kullan
-            
-        elif protocol_upper == "DSR":
-            # DSR için DYMO router kullan - radyo ayarlarını override ETME
-            if network_name is None or network_name.strip() == "":
-                network_name = "inet.examples.manetrouting.dymo.DYMONetwork"
-            host_type = "inet.node.dymo.DYMORouter"
-            routing_conf = '*.host[*].routingProtocol = "inet.routing.dymo.DYMO"'
-            use_custom_radio = False  # DYMONetwork kendi radyo ayarlarını kullanacak
-            
-        elif protocol_upper == "OLSR":
-            # OLSR için AdhocHost deneyelim (çalışmazsa başka çözüm)
-            if network_name is None or network_name.strip() == "":
-                network_name = "inet.examples.adhoc.ieee80211.Net80211"
-            host_type = "inet.node.inet.AdhocHost"
-            routing_conf = '*.host[*].routingProtocol = "inet.routing.extras.olsr.OLSR"'
-            use_custom_radio = True
-            
-        else:
-            # Varsayılan: AODV yapısı
-            if network_name is None or network_name.strip() == "":
-                network_name = "inet.examples.aodv.AODVNetwork"
+            # AODV - Reaktif protokol
+            network_name = generic_network
             host_type = "inet.node.aodv.AODVRouter"
             routing_conf = ""
-            use_custom_radio = True
+        
+        elif protocol_upper == "GPSR":
+            # GPSR - Konum tabanlı routing
+            network_name = generic_network
+            host_type = "inet.node.gpsr.GPSRRouter"
+            routing_conf = ""
+        
+        elif protocol_upper == "DSDV":
+            # DSDV - Proaktif (table-driven) protokol
+            network_name = generic_network
+            host_type = "inet.node.inet.AdhocHost"
+            routing_conf = """
+# DSDV Routing Protocol Activation
+*.host[*].hasIPv4 = true
+*.host[*].hasIPv6 = false
+*.host[*].routingTable.typename = "IPv4RoutingTable"
+*.host[*].routing.typename = "DSDV_2"
+*.host[*].routing.activeRouteTimeout = 3s
+"""
+            
+        elif protocol_upper == "DSR":
+            # DSR - Reaktif kaynak yönlendirme
+            network_name = generic_network
+            host_type = "inet.node.inet.AdhocHost"
+            routing_conf = """
+# DSR Routing Protocol Activation
+*.host[*].hasIPv4 = true
+*.host[*].hasIPv6 = false
+*.host[*].routingTable.typename = "IPv4RoutingTable"
+*.host[*].routing.typename = "DSRUU"
+"""
+            
+        elif protocol_upper == "OLSR":
+            # OLSR - Proaktif link-state
+            network_name = generic_network
+            host_type = "inet.node.inet.AdhocHost"
+            routing_conf = """
+# OLSR Routing Protocol Activation
+*.host[*].hasIPv4 = true
+*.host[*].hasIPv6 = false
+*.host[*].routingTable.typename = "IPv4RoutingTable"
+*.host[*].routing.typename = "OLSR"
+*.host[*].routing.HelloInterval = 2s
+*.host[*].routing.TcInterval = 5s
+"""
+            
+        else:
+            # Varsayılan: AODV
+            network_name = generic_network
+            host_type = "inet.node.aodv.AODVRouter"
+            routing_conf = ""
         
         if network_name and network_name.strip():
             network_name = network_name.strip()
@@ -159,14 +181,13 @@ cmdenv-express-mode = true
 seed-set = {seed}
 repeat = 1
 
-# RNG (Random Number Generator) Seed Kontrolü
-# Tüm modüller için aynı seed'i kullan
-**.rng-0 = {seed}
+# RNG (Random Number Generator) Kontrolü
+# seed-set zaten tüm RNG'leri kontrol ediyor, ekstra ayar gereksiz
 num-rngs = 1
 
 # --- NETWORK VE HOST AYARLARI ---
 *.numHosts = {num_nodes}
-*.host[*].typename = "{host_type}"
+*.hostType = "{host_type}"
 
 # --- PROTOKOL AYARLARI ---
 {routing_conf}
